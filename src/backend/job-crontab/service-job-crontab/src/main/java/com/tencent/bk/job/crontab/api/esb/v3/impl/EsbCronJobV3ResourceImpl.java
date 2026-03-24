@@ -368,17 +368,6 @@ public class EsbCronJobV3ResourceImpl implements EsbCronJobV3Resource {
     }
 
     private void checkRequest(EsbSaveCronV3Request request) {
-        // 定时任务名称合法性校验
-        if (StringUtils.isNotBlank(request.getName())) {
-            try {
-                StringCheckHelper stringCheckHelper = new StringCheckHelper(
-                    new TrimChecker(), new IlegalCharChecker(), new MaxLengthChecker(60));
-                request.setName(stringCheckHelper.checkAndGetResult(request.getName()));
-            } catch (StringCheckException e) {
-                log.warn("Cron Job Name is invalid:", e);
-                throw new InvalidParamException(e, ErrorCode.ILLEGAL_PARAM);
-            }
-        }
         // 定时任务表达式有效性校验
         if (StringUtils.isNotBlank(request.getCronExpression())) {
             CronCheckUtil.checkCronExpression(request.getCronExpression(), "expression");
