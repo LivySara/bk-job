@@ -1503,7 +1503,7 @@ public class BizCmdbClient extends BaseCmdbClient implements IBizCmdbClient {
         req.setContainerFields(ContainerDTO.Fields.ALL);
         req.setPodFields(PodDTO.Fields.ALL);
         // 根据容器 ID 升序排列返回的数据，避免由于分页查询期间数据变更导致返回数据重复或者遗漏
-        req.setPage(new Page(0, 500, ContainerDTO.Fields.ID));
+        req.setPage(new Page(0, 50, ContainerDTO.Fields.ID)); // 开发环境验证，设置页大小为50
 
         if (req.getNodeIdList() == null || req.getNodeIdList().size() <= 200) {
             return loopPageListKubeContainerByTopo(req);
