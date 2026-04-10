@@ -1,7 +1,8 @@
 <template>
   <ai-blueking
-    v-show="false"
+    v-if="apiUrl"
     ref="aiRef"
+    :before-nimbus-click="handleBeforeNimbusClick"
     :default-width="defaultWidth"
     :url="apiUrl" />
 </template>
@@ -32,35 +33,50 @@
       apiUrl.value = data.agentRootUrl;
     });
 
-  const handleShowBlueking = async (commandName, params, sessionCode, showOptions = {}) => {
-    const originalCommand = _.find((aiRef.value?.agentInfo?.conversationSettings?.commands || []), item => item.id === commandName);
+  const handleBeforeNimbusClick = async () => {
+    const curentScope =  `${window.PROJECT_CONFIG.SCOPE_TYPE}/${window.PROJECT_CONFIG.SCOPE_ID}`;
+    const sceneType = 3;
+    const sessionMemo = await AiService.fetchChatSession({
+      sceneType,
+      sceneResourceId: curentScope,
+    });
+    aiRef.value?.handleShow(sessionMemo?.aiSessionId);
+    if (!sessionMemo?.aiSessionId) {
+      const currentSession = aiRef.value.getChatHelper().session.current.value;
+      AiService.updateChatSession({
+        sceneType,
+        sceneResourceId: curentScope,
+        aiSessionId: currentSession.sessionCode,
+        sessionName: currentSession.sessionName,
+      });
+    }
+    return false;
+  };
 
+  const handleShowBlueking = async (commandName, params, sessionCode, createOptions = {}) => {
+    const chatHelper = aiRef.value.getChatHelper();
+    const originalCommand = _.find(chatHelper?.agent.info.value?.conversationSettings?.commands, item => item.id === commandName);
 
-    if (!originalCommand?.components) {
-      console.error('AI 命令配置不完整', aiRef.value?.agentInfo);
+    if (chatHelper.session.current.value.sessionCode !== sessionCode && _.find(chatHelper.session.list.value, item => item.sessionCode
+      === sessionCode)) {
+      // 切换到目标会话
+      await chatHelper.session.chooseSession(sessionCode);
+    } else {
+      await chatHelper.session.createSession({
+        sessionCode: `${Date.now()}_${_.random(1000, 9999)}`,
+        sessionName: '新会话',
+        ...createOptions,
+      });
     }
 
-    // 深拷贝 command 对象，避免修改原对象
-    const command = {
+    await aiRef.value?.show(chatHelper.session.current.value.sessionCode);
+    aiRef.value?.sendShortcut({
       ...originalCommand,
       components: originalCommand.components.map(item => ({
         ...item,
         default: params[item.key],
       })),
-    };
-
-    const sessionList = await aiRef.value?.getSessionList();
-    if (!_.find(sessionList, item => item.sessionCode === sessionCode)) {
-      // 存在会话，无需创建
-      await aiRef.value?.addNewSession();
-    }
-
-
-    await aiRef.value?.handleShow(sessionCode, {  showFirst: true, ...showOptions });
-    aiRef.value?.handleShortcutClick({
-      shortcut: command,
-      source: 'popup',
-    }, true);
+    });
   };
 
 
@@ -73,19 +89,19 @@
     });
     aiRef.value?.handleShow(sessionMemo?.aiSessionId);
     if (!sessionMemo?.aiSessionId) {
-      const sessionList = await aiRef.value?.getSessionList();
+      const currentSession = aiRef.value.getChatHelper().session.current.value;
       AiService.updateChatSession({
         sceneType,
         sceneResourceId: curentScope,
-        aiSessionId: sessionList[0]?.sessionCode,
-        sessionName: sessionList[0]?.sessionName,
+        aiSessionId: currentSession.sessionCode,
+        sessionName: currentSession.sessionName,
       });
     }
   });
 
-  eventBus.$on('ai:checkScript', (params) => {
+  eventBus.$on('ai:checkScript', async (params) => {
     handleShowBlueking('checkScript', params, undefined, {
-      isTemporary: false,
+      isTemporary: true,
     });
   });
 
@@ -98,12 +114,12 @@
     });
     await handleShowBlueking('checkScript', params, sessionMemo?.aiSessionId);
     if (!sessionMemo?.aiSessionId) {
-      const sessionList = await aiRef.value?.getSessionList();
+      const currentSession = aiRef.value.getChatHelper().session.current.value;
       AiService.updateChatSession({
         sceneType,
         sceneResourceId: currentScriptVersionId,
-        aiSessionId: sessionList[0]?.sessionCode,
-        sessionName: sessionList[0]?.sessionName,
+        aiSessionId: currentSession.sessionCode,
+        sessionName: currentSession.sessionName,
       });
     }
   });
@@ -116,12 +132,12 @@
     });
     await handleShowBlueking('analyzeScriptTaskError', params, sessionMemo?.aiSessionId);
     if (!sessionMemo?.aiSessionId) {
-      const sessionList = await aiRef.value?.getSessionList();
+      const currentSession = aiRef.value.getChatHelper().session.current.value;
       AiService.updateChatSession({
         sceneType: 1,
         sceneResourceId: currrentStepInstanceId,
-        aiSessionId: sessionList[0]?.sessionCode,
-        sessionName: sessionList[0]?.sessionName,
+        aiSessionId: currentSession.sessionCode,
+        sessionName: currentSession.sessionName,
       });
     }
   });
@@ -134,20 +150,20 @@
     });
     await handleShowBlueking('analyzeFileTaskError', params, sessionMemo?.aiSessionId);
     if (!sessionMemo?.aiSessionId) {
-      const sessionList = await aiRef.value?.getSessionList();
+      const currentSession = aiRef.value.getChatHelper().session.current.value;
       AiService.updateChatSession({
         sceneType: 1,
         sceneResourceId: currrentStepInstanceId,
-        aiSessionId: sessionList[0]?.sessionCode,
-        sessionName: sessionList[0]?.sessionName,
+        aiSessionId: currentSession.sessionCode,
+        sessionName: currentSession.sessionName,
       });
     }
   });
 
 </script>
 <style lang="postcss">
-.ai-blueking-wrapper{
-  .shortcuts-bar{
+.ai-blueking-panel{
+  .shortcut-btns{
     display: none;
   }
 }
