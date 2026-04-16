@@ -22,12 +22,23 @@
  * IN THE SOFTWARE.
  */
 
-dependencies {
-    api 'org.springframework.boot:spring-boot-starter'
-    // Reactor Context 与 ThreadLocal 之间的自动 trace 传播桥接，
-    // 需要在配置文件中设置 spring.reactor.context-propagation=auto 才能启用
-    api 'io.micrometer:micrometer-tracing-bridge-otel'
-    api 'io.opentelemetry:opentelemetry-sdk'
-    api "io.opentelemetry.instrumentation:opentelemetry-jdbc"
-    api "io.opentelemetry:opentelemetry-exporter-otlp"
+package com.tencent.bk.job.crontab.service;
+
+import com.tencent.bk.job.common.model.User;
+
+/**
+ * 定时任务迁移专用 Service（与正常用户使用的接口分开）
+ */
+public interface CronJobMigrationService {
+
+    /**
+     * 启用、禁用定时任务（迁移场景专用，不修改最后修改人和最后修改时间）
+     *
+     * @param user      用户
+     * @param appId     业务 ID
+     * @param cronJobId 定时任务 ID
+     * @param enable    是否启用
+     * @return 是否操作成功
+     */
+    Boolean changeCronJobEnableStatusForMigration(User user, Long appId, Long cronJobId, Boolean enable);
 }
