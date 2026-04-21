@@ -28,7 +28,7 @@ import com.tencent.bk.job.common.cc.model.InstanceTopologyDTO;
 import com.tencent.bk.job.common.cc.sdk.IBizCmdbClient;
 import com.tencent.bk.job.common.constant.CcNodeTypeEnum;
 import com.tencent.bk.job.common.model.dto.ApplicationHostDTO;
-import com.tencent.bk.job.common.model.vo.HostTopoPathVO;
+import com.tencent.bk.job.common.model.dto.HostTopoPathDTO;
 import com.tencent.bk.job.manage.dao.HostTopoDAO;
 import com.tencent.bk.job.manage.model.dto.HostTopoDTO;
 import com.tencent.bk.job.manage.service.host.HostTopoPathService;
@@ -81,7 +81,7 @@ public class HostTopoPathServiceImpl implements HostTopoPathService {
         Map<Long, String> setNameMap = new HashMap<>();
         Map<Long, String> moduleNameMap = new HashMap<>();
         try {
-            InstanceTopologyDTO topoTree = bizCmdbClient.getBizInstCompleteTopology(tenantId, bizId);
+            InstanceTopologyDTO topoTree = bizCmdbClient.getBizInstTopologyPreferCache(tenantId, bizId);
             if (topoTree != null) {
                 extractNodeNames(topoTree, setNameMap, moduleNameMap);
             }
@@ -95,17 +95,18 @@ public class HostTopoPathServiceImpl implements HostTopoPathService {
             if (CollectionUtils.isEmpty(topoRelations)) {
                 continue;
             }
-            List<HostTopoPathVO> topoPathList = new ArrayList<>();
+            List<HostTopoPathDTO> topoPathList = new ArrayList<>();
             for (HostTopoDTO topoRelation : topoRelations) {
+                // 拓扑树种不存在的主机可能为IP白名单主机，不展示其拓扑路径
                 String setName = setNameMap.getOrDefault(
                     topoRelation.getSetId(),
-                    String.valueOf(topoRelation.getSetId())
+                    "-"
                 );
                 String moduleName = moduleNameMap.getOrDefault(
                     topoRelation.getModuleId(),
-                    String.valueOf(topoRelation.getModuleId())
+                    "-"
                 );
-                topoPathList.add(new HostTopoPathVO(setName, moduleName));
+                topoPathList.add(new HostTopoPathDTO(setName, moduleName));
             }
             host.setTopoPathList(topoPathList);
         }
