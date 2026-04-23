@@ -1,0 +1,87 @@
+### Description
+
+Create a new job plan under a resource scope, based on a job template. Validation, permission checks, and persistence align with the web UI create-plan flow; this endpoint only exposes the OpenAPI V4 contract (JSON body, snake_case field names).
+
+### Scope (product confirmed)
+
+**Only supports creating a plan under an existing job template**: an existing, accessible `job_template_id` is required. Scenarios such as no template, draft-only, or a standalone JSON description of all steps are **not** supported. Any future extension needs a separate spec and API.
+
+### Request Parameters
+
+#### Body Parameters
+
+| Field            | Type   | Required | Description |
+|------------------|--------|----------|-------------|
+| bk_scope_type    | string | Yes      | Resource scope type. Allowed values: `biz` (business) or `biz_set` (business set) |
+| bk_scope_id      | string | Yes      | Resource scope ID (business ID or business set ID) |
+| job_template_id  | long   | Yes      | Job template ID; must exist and the caller must be allowed to create a plan for it |
+| name             | string | Yes      | Plan name; same rules as web: trim, non-empty, no illegal characters, max length 60 |
+| enable_steps     | array  | Yes      | List of template step IDs to enable (template step id / templateStepId in model), same as web “enabled steps” |
+| variables        | array  | No       | Optional overrides for global variable default values; same semantics as web `TaskPlanCreateUpdateReq.variables`. Omit or pass `[]` to use template definitions only |
+
+**`variables` item fields** (aligned with web plan variable VO; request uses snake_case):
+
+| Field                 | Type   | Required | Description |
+|-----------------------|--------|----------|-------------|
+| id                    | long   | Conditional | Template global variable ID when overriding defaults |
+| name                  | string | Conditional | Variable name |
+| type                  | int    | Conditional | Variable type 1-6, same as product documentation |
+| default_value         | string | No       | Default for non host-list types |
+| default_target_value  | object | No       | For host list type; same structure as `TaskTargetVO` in web |
+| value                 | string | No       | Value field, same as web |
+| target_value          | object | No       | Host list value |
+| description           | string | No       | Description |
+| changeable            | int    | Conditional | 0 = fixed, 1 = changeable |
+| required              | int    | Conditional | 0 = optional, 1 = required |
+| delete                | int    | No       | 0/1, rarely used on create |
+
+### Request Example
+
+- POST
+
+```json
+{
+    "bk_scope_type": "biz",
+    "bk_scope_id": "2",
+    "job_template_id": 1000,
+    "name": "my-api-plan",
+    "enable_steps": [1, 2, 3],
+    "variables": []
+}
+```
+
+### Response Examples
+
+#### Failure
+
+{% include '_generic_v4_error_resp.md.j2' %}
+
+#### Success
+
+```json
+{
+    "data": {
+        "bk_scope_type": "biz",
+        "bk_scope_id": "2",
+        "bk_biz_id": 2,
+        "job_plan_id": 50001,
+        "job_template_id": 1000,
+        "name": "my-api-plan"
+    }
+}
+```
+
+### Response Fields
+
+{% include '_generic_v4_response.md.j2' %}
+
+#### data
+
+| Field            | Type   | Description        |
+|------------------|--------|--------------------|
+| bk_scope_type    | string | Resource scope type |
+| bk_scope_id      | string | Resource scope ID  |
+| bk_biz_id        | long   | Legacy biz / biz set id |
+| job_plan_id      | long   | Newly created plan id |
+| job_template_id  | long   | Job template id    |
+| name             | string | Plan name          |

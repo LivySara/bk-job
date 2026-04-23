@@ -5864,6 +5864,124 @@ paths:
           appVerifiedRequired: true
           resourcePermissionRequired: true
         descriptionEn: Get job instance status
+  /api/v4/create_job_plan:
+    post:
+      operationId: v4_create_job_plan
+      description: 创建执行方案
+      tags:
+        - v4
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      bk_scope_type:
+                        type: string
+                        description: '资源范围类型。可选值: biz - 业务，biz_set - 业务集'
+                      bk_scope_id:
+                        type: string
+                        description: 资源范围ID, 与bk_scope_type对应, 表示业务ID或者业务集ID
+                      bk_biz_id:
+                        type: number
+                        description: 兼容字段,表示业务ID或者业务集ID
+                      job_plan_id:
+                        type: number
+                        description: 执行方案 ID
+                      job_template_id:
+                        type: number
+                        description: 作业模版 ID
+                      name:
+                        type: string
+                        description: 执行方案名称
+                    description: 数据
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        description: 错误码
+                      data:
+                        type: object
+                        properties:
+                          '':
+                            type: string
+                        description: 具体的错误数据，如无权限时的缺少权限数据
+                      message:
+                        type: string
+                        description: 错误信息
+                    description: 错误信息，只有在异常响应时（HTTP状态码!=2xx）才存在该字段（权限不足、参数错误等），正常响应时不存在
+          description: ''
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - bk_scope_type
+              - bk_scope_id
+              - job_template_id
+              - name
+              - enable_steps
+              properties:
+                bk_scope_type:
+                  type: string
+                  description: '资源范围类型。可选值: biz - 业务，biz_set - 业务集'
+                bk_scope_id:
+                  type: string
+                  description: 资源范围ID, 与bk_scope_type对应, 表示业务ID或者业务集ID
+                job_template_id:
+                  type: number
+                  description: 作业模版 ID
+                name:
+                  type: string
+                  description: 执行方案名称，与 Web 创建接口一致的校验（去空格、非法字符、最大长度 60 等）
+                enable_steps:
+                  type: array
+                  description: 启用的作业模版步骤 ID 列表，对应模版的 template_step_id
+                  items:
+                    type: number
+                variables:
+                  type: array
+                  description: 可选。用于覆盖作业模版全局变量默认值，语义与 Web 执行方案创建请求中的 variables 一致
+                  items:
+                    type: object
+        required: true
+        description: '请注意：接口任何数字类型的字段都需要传递原始数字，不要用科学计数法表示！'
+      x-bk-apigateway-resource:
+        isPublic: true
+        allowApplyPermission: true
+        matchSubpath: false
+        enableWebsocket: false
+        backend:
+          name: default
+          method: post
+          path: /{env.api_path_prefix}api/job/v4/job-manage/create_job_plan
+          matchSubpath: false
+          timeout: 0
+        pluginConfigs:
+          - type: bk-header-rewrite
+            yaml: |-
+              set:
+                - key: X-Bk-Job-Api-Type
+                  value: 'user'
+              remove: []
+        authConfig:
+          userVerifiedRequired: true
+          appVerifiedRequired: true
+          resourcePermissionRequired: true
+        descriptionEn: Create job plan
   /api/v4/system/batch_get_job_instance_execute_object_log:
     post:
       operationId: v4_system_batch_get_job_instance_execute_object_log
