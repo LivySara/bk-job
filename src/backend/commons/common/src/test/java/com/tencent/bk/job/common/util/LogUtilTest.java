@@ -74,7 +74,6 @@ public class LogUtilTest {
         assertThat(LogUtil.sanitizeForLog("a\nb\nc", 100)).isEqualTo("abc");
     }
 
-
     @Test
     void testTailLog() {
         // null 原样返回
