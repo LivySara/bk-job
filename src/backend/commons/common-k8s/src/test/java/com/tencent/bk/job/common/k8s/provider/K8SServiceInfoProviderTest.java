@@ -33,6 +33,7 @@ import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1PodStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.cloud.kubernetes.commons.discovery.DefaultKubernetesServiceInstance;
@@ -48,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -233,6 +235,55 @@ class K8SServiceInfoProviderTest {
         assertEquals(0, result.size());
         verify(coreV1Api, times(0)).listNamespacedPod(any(), any(), any(), any(), any(), any(),
             any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldPassDefaultLabelSelectorWhenInstantiatedByDefaultConstructor() throws Exception {
+        ServiceInstance instance = createKubernetesServiceInstance(
+            "uid-a", "job-manage", "10.0.0.1", 19801, NAMESPACE
+        );
+        DiscoveryClient discoveryClient = createDiscoveryClient(Collections.singletonList(instance));
+        mockListNamespacedPod(NAMESPACE, Collections.singletonList(
+            buildPod("uid-a", "job-manage-0", "v3.9.0", "Running", null)
+        ));
+
+        K8SServiceInfoProvider provider = new K8SServiceInfoProvider(discoveryClient, coreV1Api);
+        provider.listServiceInfo();
+
+        // 显式断言：listNamespacedPod 的第 6 形参（labelSelector）等于默认值 app.kubernetes.io/name=bk-job
+        // 其它形参保持 null，避免任何形参被错误带值
+        verify(coreV1Api).listNamespacedPod(
+            eq(NAMESPACE), isNull(), isNull(), isNull(),
+            isNull(), eq(K8SServiceInfoProvider.DEFAULT_POD_LABEL_SELECTOR), isNull(), isNull(),
+            isNull(), isNull(), isNull(), isNull()
+        );
+        assertEquals("app.kubernetes.io/name=bk-job", K8SServiceInfoProvider.DEFAULT_POD_LABEL_SELECTOR);
+    }
+
+    @Test
+    void shouldPassCustomLabelSelectorWhenInjectedViaConstructor() throws Exception {
+        ServiceInstance instance = createKubernetesServiceInstance(
+            "uid-a", "job-manage", "10.0.0.1", 19801, NAMESPACE
+        );
+        DiscoveryClient discoveryClient = createDiscoveryClient(Collections.singletonList(instance));
+        mockListNamespacedPod(NAMESPACE, Collections.singletonList(
+            buildPod("uid-a", "job-manage-0", "v3.9.0", "Running", null)
+        ));
+
+        String customSelector = "app.kubernetes.io/name=custom-job,app.kubernetes.io/instance=ut-instance";
+        K8SServiceInfoProvider provider = new K8SServiceInfoProvider(
+            discoveryClient, coreV1Api, K8SServiceInfoProvider.DEFAULT_POD_CACHE_TTL_MS, customSelector
+        );
+        provider.listServiceInfo();
+
+        // 通过 ArgumentCaptor 取出第 6 形参，断言自定义 selector 被原样透传，未被默认值覆盖
+        ArgumentCaptor<String> labelSelectorCaptor = ArgumentCaptor.forClass(String.class);
+        verify(coreV1Api).listNamespacedPod(
+            eq(NAMESPACE), isNull(), isNull(), isNull(),
+            isNull(), labelSelectorCaptor.capture(), isNull(), isNull(),
+            isNull(), isNull(), isNull(), isNull()
+        );
+        assertEquals(customSelector, labelSelectorCaptor.getValue());
     }
 
     private void mockListNamespacedPod(String namespace, List<V1Pod> pods) throws ApiException {
