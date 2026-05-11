@@ -22,27 +22,54 @@
  * IN THE SOFTWARE.
  */
 
-package com.tencent.bk.job.file_gateway.dao.filesource;
+package com.tencent.bk.job.common.paas.model.cmsi.req;
 
-import com.tencent.bk.job.file_gateway.model.dto.FileSourceDTO;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.tencent.bk.job.common.paas.model.NotifyMessageDTO;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
 /**
- * 租户无关的文件源DAO，用于系统内部逻辑
+ * Cmsi接口发送企业微信(RTX)消息的请求
  */
-public interface NoTenantFileSourceDAO {
+@Getter
+@Setter
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class SendRtxV1Req extends CmsiSendMsgV1BasicReq {
 
-    int updateFileSourceStatus(Integer fileSourceId, Integer status);
+    /**
+     * 企业微信接收者，包含企业微信用户ID。
+     * 若同时传入 receiver 和 receiver__username，以 receiver 为准
+     */
+    @JsonProperty("receiver")
+    private List<String> receiver;
 
-    FileSourceDTO getFileSourceById(Integer id);
+    /**
+     * 企业微信接收者，包含蓝鲸用户唯一标识 bk_username，用户需在蓝鲸平台注册
+     */
+    @JsonProperty("receiver__username")
+    private List<String> receiverUsername;
 
-    List<FileSourceDTO> listFileSourceByCode(String code);
+    /**
+     * 消息标题
+     */
+    @JsonProperty("title")
+    private String title;
 
-    FileSourceDTO getFileSourceByCode(Long appId, String code);
+    /**
+     * 消息内容
+     */
+    @JsonProperty("content")
+    private String content;
 
-    List<FileSourceDTO> listEnabledFileSource(Integer start, Integer pageSize);
-
-    boolean existsFileSourceUsingCredential(Long appId, String credentialId);
-
+    public static SendRtxV1Req fromNotifyMessageDTO(NotifyMessageDTO notifyMessageDTO) {
+        SendRtxV1Req sendRtxV1Req = new SendRtxV1Req();
+        sendRtxV1Req.setReceiverUsername(notifyMessageDTO.getReceiverUsername());
+        sendRtxV1Req.setTitle(notifyMessageDTO.getTitle());
+        sendRtxV1Req.setContent(notifyMessageDTO.getContent());
+        return sendRtxV1Req;
+    }
 }
