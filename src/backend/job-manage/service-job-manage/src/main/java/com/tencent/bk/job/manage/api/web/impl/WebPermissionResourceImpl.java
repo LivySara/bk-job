@@ -143,11 +143,19 @@ public class WebPermissionResourceImpl implements WebPermissionResource {
                     )
                 );
             case "view":
-            case "execute":
                 return Response.buildSuccessResp(
                     webAuthService.toAuthResultVO(
                         isReturnApplyUrl,
                         scriptAuthService.authViewScript(user, appResourceScope, resourceId, null)
+                    )
+                );
+            case "execute":
+                // 仅校验脚本资源维度的执行权限，避免在不知道执行目标主机时返回查看权限的申请链接，
+                // 导致用户即使按提示申请权限后仍无法执行
+                return Response.buildSuccessResp(
+                    webAuthService.toAuthResultVO(
+                        isReturnApplyUrl,
+                        scriptAuthService.authExecuteScript(user, appResourceScope, resourceId, null)
                     )
                 );
             case "edit":

@@ -98,6 +98,20 @@ public class ScriptAuthServiceImpl implements ScriptAuthService {
     }
 
     @Override
+    public AuthResult authExecuteScript(User user,
+                                        AppResourceScope appResourceScope,
+                                        String scriptId,
+                                        String scriptName) {
+        return authService.auth(
+            user,
+            ActionId.EXECUTE_SCRIPT,
+            ResourceTypeEnum.SCRIPT,
+            scriptId,
+            buildAppScopePath(appResourceScope)
+        );
+    }
+
+    @Override
     public List<String> batchAuthViewScript(User user,
                                             AppResourceScope appResourceScope,
                                             List<String> scriptIdList) {
