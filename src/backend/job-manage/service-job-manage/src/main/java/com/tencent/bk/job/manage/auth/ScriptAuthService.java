@@ -72,23 +72,6 @@ public interface ScriptAuthService {
                                 String scriptName);
 
     /**
-     * 资源范围下执行脚本鉴权
-     * <p>
-     * 仅校验脚本资源维度的执行权限，不校验执行目标主机权限；用于无须主机上下文的场景
-     * （如脚本列表点击"去执行"时，提前向用户提示需要申请的脚本执行权限）。
-     *
-     * @param user             用户
-     * @param appResourceScope 资源范围
-     * @param scriptId         脚本ID
-     * @param scriptName       脚本名称，如果传入为空，则会调用ResourceNameQueryService查询
-     * @return 鉴权结果
-     */
-    AuthResult authExecuteScript(User user,
-                                 AppResourceScope appResourceScope,
-                                 String scriptId,
-                                 String scriptName);
-
-    /**
      * 资源范围下查看脚本批量鉴权
      *
      * @param user             用户
