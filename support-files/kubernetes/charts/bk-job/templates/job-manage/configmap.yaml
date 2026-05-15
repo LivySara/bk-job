@@ -122,6 +122,10 @@ data:
               available: mail,weixin,rtx
         scope-panel:
           showNoPermissionScopes: {{ .Values.manageConfig.scopePanel.showNoPermissionScopes }}
+        dynamic-group-agent-statistics:
+          thread-pool:
+            core-pool-size: {{ .Values.manageConfig.dynamicGroupAgentStatistics.threadPool.corePoolSize }}
+            max-pool-size: {{ .Values.manageConfig.dynamicGroupAgentStatistics.threadPool.maxPoolSize }}
     mysql:
       {{- toYaml .Values.manageConfig.mysql | nindent 6 }}
     server:

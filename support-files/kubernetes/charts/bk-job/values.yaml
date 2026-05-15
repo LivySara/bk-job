@@ -1235,6 +1235,13 @@ manageConfig:
     daemon:
       # 是否开启
       enabled: true
+  # 动态分组 Agent 统计查询相关配置
+  dynamicGroupAgentStatistics:
+    threadPool:
+      # 并行查询动态分组 Agent 统计数据所用线程池：核心线程数
+      corePoolSize: 1
+      # 并行查询动态分组 Agent 统计数据所用线程池：最大线程数
+      maxPoolSize: 30
   # 自定义挂载卷，如果配置了则覆盖全局的volumeExtension
   volumeExtension:
     volumes: []

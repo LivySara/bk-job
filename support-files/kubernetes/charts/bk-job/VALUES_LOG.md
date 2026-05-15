@@ -1,5 +1,17 @@
 # chart values 更新日志
 
+## 0.9.2
+1. `manageConfig` 新增 `dynamicGroupAgentStatistics.threadPool` 配置项，用于调整动态分组 Agent 统计数据并行查询的线程池参数
+```yaml
+manageConfig:
+  dynamicGroupAgentStatistics:
+    threadPool:
+      # 并行查询动态分组 Agent 统计数据所用线程池：核心线程数（默认1）
+      corePoolSize: 1
+      # 并行查询动态分组 Agent 统计数据所用线程池：最大线程数（默认30）
+      maxPoolSize: 30
+```
+
 ## 0.9.1
 1. 新增外部系统（GSE、CMDB、IAM、BK-Login、BK-User）重试配置，采用指数退避策略
 ```yaml

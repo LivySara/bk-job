@@ -28,6 +28,8 @@ import com.tencent.bk.job.common.WatchableThreadPoolExecutor;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.helpers.MessageFormatter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -44,6 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Configuration(value = "jobManageExecutorConfig")
+@EnableConfigurationProperties(DynamicGroupAgentStatisticsProperties.class)
 public class ExecutorConfiguration {
 
     /**
@@ -188,6 +191,42 @@ public class ExecutorConfiguration {
             1,
             TimeUnit.SECONDS,
             new LinkedBlockingQueue<>()
+        );
+    }
+
+    /**
+     * 并行查询动态分组 Agent 统计数据所用的线程池。
+     * 默认：核心线程数=1，最大线程数=30，同步队列，拒绝时由调用线程执行并打印 warn 日志。
+     */
+    @Bean("dynamicGroupAgentStatisticsExecutor")
+    public ThreadPoolExecutor dynamicGroupAgentStatisticsExecutor(
+        MeterRegistry meterRegistry,
+        @Autowired DynamicGroupAgentStatisticsProperties properties) {
+        DynamicGroupAgentStatisticsProperties.ThreadPoolProperties poolProps = properties.getThreadPool();
+        int corePoolSize = poolProps.getCorePoolSize();
+        int maxPoolSize = poolProps.getMaxPoolSize();
+        return new WatchableThreadPoolExecutor(
+            meterRegistry,
+            "dynamicGroupAgentStatisticsExecutor",
+            corePoolSize,
+            maxPoolSize,
+            true,
+            60L,
+            TimeUnit.SECONDS,
+            new SynchronousQueue<>(),
+            getThreadFactoryByNameAndSeq("dynamicGroupAgentStatistics-", new AtomicInteger(1)),
+            (r, executor) -> {
+                log.warn(
+                    "dynamicGroupAgentStatisticsExecutor task rejected, will run in caller thread! "
+                        + "Consider increasing max-pool-size (current={}). "
+                        + "executor.poolSize={}, executor.queueSize={}",
+                    maxPoolSize,
+                    executor.getPoolSize(),
+                    executor.getQueue().size()
+                );
+                // 调用线程执行（CallerRunsPolicy）
+                r.run();
+            }
         );
     }
 
