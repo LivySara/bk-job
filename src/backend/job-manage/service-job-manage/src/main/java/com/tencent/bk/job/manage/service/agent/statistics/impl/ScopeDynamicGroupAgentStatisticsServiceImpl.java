@@ -24,8 +24,6 @@
 
 package com.tencent.bk.job.manage.service.agent.statistics.impl;
 
-import com.tencent.bk.job.common.constant.ErrorCode;
-import com.tencent.bk.job.common.exception.NotImplementedException;
 import com.tencent.bk.job.common.model.dto.AppResourceScope;
 import com.tencent.bk.job.common.model.dto.ApplicationHostDTO;
 import com.tencent.bk.job.common.model.vo.DynamicGroupIdWithMeta;
@@ -38,29 +36,38 @@ import com.tencent.bk.job.manage.service.host.impl.ScopeDynamicGroupHostServiceI
 import com.tencent.bk.job.manage.service.impl.BizDynamicGroupService;
 import com.tencent.bk.job.manage.service.impl.agent.AgentStatusService;
 import com.tencent.bk.job.manage.util.ScopeFeatureUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class ScopeDynamicGroupAgentStatisticsServiceImpl implements ScopeDynamicGroupAgentStatisticsService {
 
     private final BizDynamicGroupService bizDynamicGroupService;
     private final ScopeDynamicGroupHostService scopeDynamicGroupHostService;
     private final AgentStatusService agentStatusService;
+    private final ThreadPoolExecutor dynamicGroupAgentStatisticsExecutor;
 
     @Autowired
-    public ScopeDynamicGroupAgentStatisticsServiceImpl(BizDynamicGroupService bizDynamicGroupService,
-                                                       ScopeDynamicGroupHostServiceImpl scopeDynamicGroupHostService,
-                                                       AgentStatusService agentStatusService) {
+    public ScopeDynamicGroupAgentStatisticsServiceImpl(
+        BizDynamicGroupService bizDynamicGroupService,
+        ScopeDynamicGroupHostServiceImpl scopeDynamicGroupHostService,
+        AgentStatusService agentStatusService,
+        @Qualifier("dynamicGroupAgentStatisticsExecutor")
+        ThreadPoolExecutor dynamicGroupAgentStatisticsExecutor) {
         this.bizDynamicGroupService = bizDynamicGroupService;
         this.scopeDynamicGroupHostService = scopeDynamicGroupHostService;
         this.agentStatusService = agentStatusService;
+        this.dynamicGroupAgentStatisticsExecutor = dynamicGroupAgentStatisticsExecutor;
     }
 
     @Override
@@ -73,22 +80,39 @@ public class ScopeDynamicGroupAgentStatisticsServiceImpl implements ScopeDynamic
         if (CollectionUtils.isEmpty(idWithMetaList)) {
             return Collections.emptyList();
         }
-        List<String> idList = idWithMetaList.stream().map(DynamicGroupIdWithMeta::getId).collect(Collectors.toList());
+        List<String> idList = idWithMetaList.stream()
+            .map(DynamicGroupIdWithMeta::getId)
+            .collect(Collectors.toList());
         Long bizId = Long.parseLong(appResourceScope.getId());
         List<DynamicGroupDTO> dynamicGroupList = bizDynamicGroupService.listDynamicGroup(tenantId, bizId, idList);
-        List<DynamicGroupHostStatisticsVO> resultList = new ArrayList<>();
-        for (DynamicGroupDTO dynamicGroupDTO : dynamicGroupList) {
-            DynamicGroupHostStatisticsVO statisticsVO = new DynamicGroupHostStatisticsVO();
-            statisticsVO.setDynamicGroup(dynamicGroupDTO.toBasicVO());
-            List<ApplicationHostDTO> hostList = scopeDynamicGroupHostService.listHostByDynamicGroup(
-                tenantId,
-                appResourceScope,
-                dynamicGroupDTO.getId()
-            );
-            AgentStatistics agentStatistics = agentStatusService.calcAgentStatistics(hostList);
-            statisticsVO.setAgentStatistics(agentStatistics);
-            resultList.add(statisticsVO);
-        }
-        return resultList;
+
+        // 并行查询每个动态分组的主机列表及 Agent 统计数据
+        List<CompletableFuture<DynamicGroupHostStatisticsVO>> futures = dynamicGroupList.stream()
+            .map(dynamicGroupDTO -> CompletableFuture.supplyAsync(
+                () -> buildDynamicGroupHostStatistics(tenantId, appResourceScope, dynamicGroupDTO),
+                dynamicGroupAgentStatisticsExecutor
+            ))
+            .collect(Collectors.toList());
+
+        return futures.stream()
+            .map(CompletableFuture::join)
+            .collect(Collectors.toList());
+    }
+
+    private DynamicGroupHostStatisticsVO buildDynamicGroupHostStatistics(
+        String tenantId,
+        AppResourceScope appResourceScope,
+        DynamicGroupDTO dynamicGroupDTO
+    ) {
+        DynamicGroupHostStatisticsVO statisticsVO = new DynamicGroupHostStatisticsVO();
+        statisticsVO.setDynamicGroup(dynamicGroupDTO.toBasicVO());
+        List<ApplicationHostDTO> hostList = scopeDynamicGroupHostService.listHostByDynamicGroup(
+            tenantId,
+            appResourceScope,
+            dynamicGroupDTO.getId()
+        );
+        AgentStatistics agentStatistics = agentStatusService.calcAgentStatistics(hostList);
+        statisticsVO.setAgentStatistics(agentStatistics);
+        return statisticsVO;
     }
 }
