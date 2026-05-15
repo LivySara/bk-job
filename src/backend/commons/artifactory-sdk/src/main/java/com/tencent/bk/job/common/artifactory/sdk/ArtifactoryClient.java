@@ -624,13 +624,24 @@ public class ArtifactoryClient {
             if (resp.getStatusLine() != null && resp.getStatusLine().getStatusCode() == 200) {
                 return Pair.of(resp.getEntity().getContent(), pair.getLeft());
             } else {
-                log.info("resp.statusLine={},resp.entity={}", resp.getStatusLine(), resp.getEntity());
+                int statusCode = resp.getStatusLine() != null ? resp.getStatusLine().getStatusCode() : -1;
+                String errorBody = null;
+                if (resp.getEntity() != null) {
+                    try {
+                        errorBody = org.apache.http.util.EntityUtils.toString(resp.getEntity());
+                    } catch (Exception ignored) {
+                    }
+                }
+                log.info("resp.statusLine={},resp.entity={}", resp.getStatusLine(), errorBody);
                 resp.close();
-                throw new InternalException(ErrorCode.FAIL_TO_REQUEST_THIRD_FILE_SOURCE_DOWNLOAD_GENERIC_FILE);
+                String detail = String.format("url=%s, statusCode=%d, body=%s", url, statusCode, errorBody);
+                throw new InternalException(ErrorCode.FAIL_TO_REQUEST_THIRD_FILE_SOURCE_DOWNLOAD_GENERIC_FILE,
+                    new String[]{detail});
             }
         } catch (IOException e) {
-            log.error("Fail to getFileInputStream", e);
-            throw new InternalException(ErrorCode.FAIL_TO_REQUEST_THIRD_FILE_SOURCE_DOWNLOAD_GENERIC_FILE);
+            log.error("Fail to getFileInputStream, url={}", url, e);
+            throw new InternalException(ErrorCode.FAIL_TO_REQUEST_THIRD_FILE_SOURCE_DOWNLOAD_GENERIC_FILE,
+                new String[]{String.format("url=%s, error=%s", url, e.getMessage())});
         } finally {
             HttpMetricUtil.clearHttpMetric();
         }

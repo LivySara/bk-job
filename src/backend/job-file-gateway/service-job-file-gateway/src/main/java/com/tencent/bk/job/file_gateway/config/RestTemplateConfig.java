@@ -24,6 +24,7 @@
 
 package com.tencent.bk.job.file_gateway.config;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
@@ -32,13 +33,16 @@ import org.springframework.web.client.RestTemplate;
 @Configuration
 public class RestTemplateConfig {
     @Bean
-    public RestTemplate restTemplate() {
+    public RestTemplate restTemplate(ObservationRegistry observationRegistry) {
         RestTemplate restTemplate = new RestTemplate();
         OkHttp3ClientHttpRequestFactory requestFactory = new OkHttp3ClientHttpRequestFactory();
         requestFactory.setConnectTimeout(5000);
         requestFactory.setReadTimeout(15000);
         requestFactory.setWriteTimeout(15000);
         restTemplate.setRequestFactory(requestFactory);
+        // 注入 ObservationRegistry，使 RestTemplate 在发起 HTTP 请求时自动传播 tracing context
+        // （即在请求头中注入 traceparent 等 W3C Trace Context 头），确保 file-worker 日志中有 traceId/spanId
+        restTemplate.setObservationRegistry(observationRegistry);
         return restTemplate;
     }
 }
