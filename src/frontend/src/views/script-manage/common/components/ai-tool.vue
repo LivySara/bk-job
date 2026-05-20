@@ -70,6 +70,7 @@
     eventBus.$emit('ai:checkScriptVersion', {
       script_type: formatScriptTypeValue(props.data.type),
       script_content: Base64.decode(props.data.content || ''),
+      script_name: props.data.name || '',
     });
     localStorage.setItem(editorAiHelperCacheKey, true);
     showAi.value = false;

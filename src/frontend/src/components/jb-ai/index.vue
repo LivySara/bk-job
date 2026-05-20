@@ -15,6 +15,7 @@
 
   import AiService from '@service/ai';
 
+  import { prettyDateTimeFormat } from '@utils/assist';
   import eventBus from '@utils/event-bus';
 
   import AiBlueking from '@blueking/ai-blueking/vue2';
@@ -126,6 +127,7 @@
   eventBus.$on('ai:checkScript', async (params) => {
     handleShowBlueking('checkScript', params, undefined, {
       isTemporary: true,
+      sessionName: `脚本检查-${prettyDateTimeFormat(new Date())}`,
     });
   });
 
@@ -136,7 +138,9 @@
       sceneType,
       sceneResourceId: currentScriptVersionId,
     });
-    await handleShowBlueking('checkScript', params, sessionMemo?.aiSessionId);
+    await handleShowBlueking('checkScript', params, sessionMemo?.aiSessionId, {
+      sessionName: `脚本-${params.script_name || ''}`,
+    });
     if (!sessionMemo?.aiSessionId) {
       const currentSession = aiRef.value.getChatHelper().session.current.value;
       AiService.updateChatSession({
@@ -155,7 +159,9 @@
       sceneType: 1,
       sceneResourceId: currrentStepInstanceId,
     });
-    await handleShowBlueking('analyzeScriptTaskError', params, sessionMemo?.aiSessionId);
+    await handleShowBlueking('analyzeScriptTaskError', params, sessionMemo?.aiSessionId, {
+      sessionName: `失败分析-${currrentStepInstanceId}`,
+    });
     if (!sessionMemo?.aiSessionId) {
       const currentSession = aiRef.value.getChatHelper().session.current.value;
       AiService.updateChatSession({
@@ -173,7 +179,9 @@
       sceneType: 1,
       sceneResourceId: currrentStepInstanceId,
     });
-    await handleShowBlueking('analyzeFileTaskError', params, sessionMemo?.aiSessionId);
+    await handleShowBlueking('analyzeFileTaskError', params, sessionMemo?.aiSessionId, {
+      sessionName: `失败分析-${currrentStepInstanceId}`,
+    });
     if (!sessionMemo?.aiSessionId) {
       const currentSession = aiRef.value.getChatHelper().session.current.value;
       AiService.updateChatSession({
