@@ -438,23 +438,23 @@
       padding: 12px;
 
       .timezone {
-        color: #313238;
         font-weight: bold;
+        color: #313238;
       }
 
       .desc {
+        padding: 4px 8px;
         margin-top: 8px;
         color: #4D4F56;
-        padding: 4px 8px;
-        border-radius: 2px;
         background-color: #F5F7FA;
+        border-radius: 2px;
 
         .bk-link {
           vertical-align: initial;
 
           .bk-link-text {
-            font-size: 12px;
             display: inline-block;
+            font-size: 12px;
           }
         }
       }
