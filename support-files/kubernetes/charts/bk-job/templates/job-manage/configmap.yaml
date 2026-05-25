@@ -126,6 +126,9 @@ data:
           thread-pool:
             core-pool-size: {{ .Values.manageConfig.dynamicGroupAgentStatistics.threadPool.corePoolSize }}
             max-pool-size: {{ .Values.manageConfig.dynamicGroupAgentStatistics.threadPool.maxPoolSize }}
+        default-account:
+          accounts:
+            {{- toYaml .Values.manageConfig.defaultAccount.accounts | nindent 12 }}
     mysql:
       {{- toYaml .Values.manageConfig.mysql | nindent 6 }}
     server:
