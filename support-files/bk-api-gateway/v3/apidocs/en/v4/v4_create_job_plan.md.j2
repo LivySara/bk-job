@@ -1,39 +1,41 @@
 ### Description
 
-Create a new job plan under a resource scope, based on a job template. Validation, permission checks, and persistence align with the web UI create-plan flow; this endpoint only exposes the OpenAPI V4 contract (JSON body, snake_case field names).
-
-### Scope (product confirmed)
-
-**Only supports creating a plan under an existing job template**: an existing, accessible `job_template_id` is required. Scenarios such as no template, draft-only, or a standalone JSON description of all steps are **not** supported. Any future extension needs a separate spec and API.
+Create a new job plan under a resource scope, based on an existing job template. Validation, permission checks, and persistence align with the Web "create job plan" flow; this endpoint only exposes the OpenAPI V4 contract (JSON body, snake_case field names).
 
 ### Request Parameters
 
 #### Body Parameters
 
-| Field            | Type   | Required | Description |
-|------------------|--------|----------|-------------|
-| bk_scope_type    | string | Yes      | Resource scope type. Allowed values: `biz` (business) or `biz_set` (business set) |
-| bk_scope_id      | string | Yes      | Resource scope ID (business ID or business set ID) |
-| job_template_id  | long   | Yes      | Job template ID; must exist and the caller must be allowed to create a plan for it |
-| name             | string | Yes      | Plan name; same rules as web: trim, non-empty, no illegal characters, max length 60 |
-| enable_steps     | array  | Yes      | List of template step IDs to enable (template step id / templateStepId in model), same as web “enabled steps” |
-| variables        | array  | No       | Optional overrides for global variable default values; same semantics as web `TaskPlanCreateUpdateReq.variables`. Omit or pass `[]` to use template definitions only |
+| Field           | Type   | Required | Description                                                                                                                                              |
+|-----------------|--------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| bk_scope_type   | string | Yes      | Resource scope type. Allowed values: `biz` or `biz_set`                                                                                                  |
+| bk_scope_id     | string | Yes      | Resource scope ID matching `bk_scope_type` (business id or business set id)                                                                              |
+| job_template_id | long   | Yes      | Job template ID (must be > 0). Template must exist and the caller must hold both `view_job_template` and `create_job_plan` permissions on the scope.     |
+| name            | string | Yes      | Plan name, 1–60 characters, must not contain HTML special characters `< > " '` (@NoXss), unique within (scope, template).                            |
+| enable_steps    | array  | No       | List of template step ids to enable. If omitted, all template steps are enabled. An empty array is **not** allowed; ids outside the template will fail. |
+| variables       | array  | No       | Optional overrides for template global variables, matched **by variable name**. Unknown names or mismatched value types will fail.                       |
 
-**`variables` item fields** (aligned with web plan variable VO; request uses snake_case):
+##### variables
 
-| Field                 | Type   | Required | Description |
-|-----------------------|--------|----------|-------------|
-| id                    | long   | Conditional | Template global variable ID when overriding defaults |
-| name                  | string | Conditional | Variable name |
-| type                  | int    | Conditional | Variable type 1-6, same as product documentation |
-| default_value         | string | No       | Default for non host-list types |
-| default_target_value  | object | No       | For host list type; same structure as `TaskTargetVO` in web |
-| value                 | string | No       | Value field, same as web |
-| target_value          | object | No       | Host list value |
-| description           | string | No       | Description |
-| changeable            | int    | Conditional | 0 = fixed, 1 = changeable |
-| required              | int    | Conditional | 0 = optional, 1 = required |
-| delete                | int    | No       | 0/1, rarely used on create |
+| Field           | Type    | Required | Description                                                                                                              |
+|-----------------|---------|----------|--------------------------------------------------------------------------------------------------------------------------|
+| name            | string  | Yes      | Template variable name (matched by name, **not** by id). Must be non-blank.                                              |
+| value           | string  | No       | Variable value for string/namespace/ciphertext/array types. For **EXECUTE_OBJECT_LIST**, use `execute_target` instead of `value`. |
+| execute_target  | object  | No       | Execute target override when the template variable type is EXECUTE_OBJECT_LIST and `follow_template=false`. Host dimensions only (see below). **`kube_container_filters` is not supported** on this API. |
+| follow_template | boolean | No       | Whether to keep the template default. Defaults to `false`. When `true`, `value` is ignored and `execute_target` must not be provided. |
+
+##### execute_target (EXECUTE_OBJECT_LIST only)
+
+| Field                  | Type  | Required | Description                                                                                         |
+|------------------------|-------|----------|-----------------------------------------------------------------------------------------------------|
+| host_list              | array | No       | Static hosts: `bk_host_id`, or `bk_cloud_id` + `ip` (same as fast_execute_script).                  |
+| dynamic_group_list     | array | No       | Dynamic group id list.                                                                              |
+| topo_node_list         | array | No       | CMDB topo nodes with `id` and `node_type`.                                                          |
+| kube_container_filters | array | No       | **Not supported** on this API; returns `ILLEGAL_PARAM_WITH_PARAM_NAME_AND_REASON` if provided.    |
+
+At least one of `host_list`, `dynamic_group_list`, or `topo_node_list` must be non-empty. This API does **not** check view permission on execute targets; permission is enforced when **starting** the plan, consistent with the Web create-plan flow.
+
+Fields other than those above (e.g. `description`, `type`, `required`, `changeable`) are determined by the template and **ignored** when supplied.
 
 ### Request Example
 
@@ -45,8 +47,28 @@ Create a new job plan under a resource scope, based on a job template. Validatio
     "bk_scope_id": "2",
     "job_template_id": 1000,
     "name": "my-api-plan",
-    "enable_steps": [1, 2, 3],
-    "variables": []
+    "enable_steps": [101, 102, 103],
+    "variables": [
+        {
+            "name": "TARGET_DIR",
+            "value": "/data/release"
+        },
+        {
+            "name": "KEEP_TEMPLATE_DEFAULT",
+            "follow_template": true
+        },
+        {
+            "name": "HOST_TARGET",
+            "execute_target": {
+                "host_list": [
+                    {"bk_host_id": 10001}
+                ],
+                "dynamic_group_list": [
+                    {"id": "dg-001"}
+                ]
+            }
+        }
+    ]
 }
 ```
 
@@ -59,14 +81,18 @@ Create a new job plan under a resource scope, based on a job template. Validatio
 #### Success
 
 ```json
+# http status=200
 {
     "data": {
         "bk_scope_type": "biz",
         "bk_scope_id": "2",
         "bk_biz_id": 2,
         "job_plan_id": 50001,
+        "job_plan_name": "my-api-plan",
         "job_template_id": 1000,
-        "name": "my-api-plan"
+        "creator": "admin",
+        "create_time": 1738220000000,
+        "need_update": false
     }
 }
 ```
@@ -77,11 +103,14 @@ Create a new job plan under a resource scope, based on a job template. Validatio
 
 #### data
 
-| Field            | Type   | Description        |
-|------------------|--------|--------------------|
-| bk_scope_type    | string | Resource scope type |
-| bk_scope_id      | string | Resource scope ID  |
-| bk_biz_id        | long   | Legacy biz / biz set id |
-| job_plan_id      | long   | Newly created plan id |
-| job_template_id  | long   | Job template id    |
-| name             | string | Plan name          |
+| Field           | Type    | Description                                                                                |
+|-----------------|---------|--------------------------------------------------------------------------------------------|
+| bk_scope_type   | string  | Resource scope type                                                                        |
+| bk_scope_id     | string  | Resource scope ID                                                                          |
+| bk_biz_id       | long    | Legacy biz / biz set id                                                                    |
+| job_plan_id     | long    | Newly created plan id                                                                      |
+| job_plan_name   | string  | Plan name                                                                                  |
+| job_template_id | long    | Job template id                                                                            |
+| creator         | string  | Plan creator (equal to the `X-Bk-Username` request header)                                 |
+| create_time     | long    | Plan create time, unix timestamp in milliseconds                                           |
+| need_update     | boolean | Whether the plan needs to be synced from the template, same semantics as Web `needUpdate`. |

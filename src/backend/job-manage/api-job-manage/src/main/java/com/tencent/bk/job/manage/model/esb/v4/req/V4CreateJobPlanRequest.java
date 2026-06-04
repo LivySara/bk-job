@@ -26,6 +26,7 @@ package com.tencent.bk.job.manage.model.esb.v4.req;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tencent.bk.job.common.esb.model.EsbAppScopeReq;
+import com.tencent.bk.job.common.validation.NoXss;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -33,30 +34,47 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 
 /**
- * 创建执行方案 V4 请求。字段语义与 Web 接口
- * {@link com.tencent.bk.job.manage.model.web.request.TaskPlanCreateUpdateReq} 一致。
+ * OpenAPI V4 创建执行方案请求体。
+ * 业务语义与 Web 端 {@link com.tencent.bk.job.manage.model.web.request.TaskPlanCreateUpdateReq} 一致，
+ * 仅做 OpenAPI ↔ 内部 DTO 的入参映射。
  */
 @Getter
 @Setter
 public class V4CreateJobPlanRequest extends EsbAppScopeReq {
 
+    /**
+     * 作业模板 ID，必填且必须 > 0。
+     */
     @JsonProperty("job_template_id")
-    @NotNull(message = "{validation.constraints.NotBlankField.message}")
-    @Min(value = 1L, message = "{validation.constraints.InvalidJobInstanceId.message}")
+    @NotNull(message = "{validation.constraints.InvalidJobTemplateId.message}")
+    @Min(value = 1L, message = "{validation.constraints.InvalidJobTemplateId.message}")
     private Long jobTemplateId;
 
-    @NotBlank(message = "{validation.constraints.NotBlankField.message}")
+    /**
+     * 执行方案名称，必填且 1-60 字符；在 (appId, templateId) 下需唯一。
+     */
     @JsonProperty("name")
+    @NotBlank(message = "{validation.constraints.InvalidJobPlanName_empty.message}")
+    @Size(max = 60, message = "{validation.constraints.InvalidJobPlanName_outOfLength.message}")
+    @NoXss(fieldName = "name")
     private String name;
 
-    @NotNull
+    /**
+     * 启用的模板步骤 ID 列表。可选；不传或传 null 时启用全部模板步骤；
+     * 不允许传空数组（与 Web 端一致地校验）；列表内出现非模板步骤 ID 将报错。
+     */
     @JsonProperty("enable_steps")
+    @Size(min = 1, message = "{validation.constraints.InvalidEnableSteps_empty.message}")
     private List<Long> enableSteps;
 
+    /**
+     * 变量覆盖列表。可选；按变量名定位模板变量并覆盖默认值。
+     */
     @JsonProperty("variables")
     @Valid
-    private List<V4CreateJobPlanVariableItem> variables;
+    private List<V4JobPlanVariableItem> variables;
 }
