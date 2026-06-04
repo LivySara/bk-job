@@ -1,6 +1,6 @@
 ### 功能描述
 
-基于已存在的作业模板，在指定资源范围下创建新的执行方案。业务校验、权限与落库流程与 Web 端「新建执行方案」一致，本接口仅做 OpenAPI ↔ 内部 DTO 的入参映射。
+基于已存在的作业模板，在指定资源范围下创建新的执行方案。
 
 ### 请求参数
 
@@ -33,7 +33,7 @@
 | topo_node_list        | array | 否  | CMDB 拓扑节点列表，元素含 `id`、`node_type`                                                    |
 | kube_container_filters | array | 否  | **本接口暂不支持**；传入将返回 `ILLEGAL_PARAM_WITH_PARAM_NAME_AND_REASON`                          |
 
-`host_list` / `dynamic_group_list` / `topo_node_list` 至少一项非空。本接口**不对**执行目标的主机/动态分组/拓扑节点做查看权限校验；权限在**启动执行方案**接口处校验，与 Web 端创建方案行为一致。
+`host_list` / `dynamic_group_list` / `topo_node_list` 至少一项非空。
 
 除上述字段外，其它字段（如 description / type / required / changeable 等）由模板决定，**传入将被忽略**。
 
@@ -103,14 +103,14 @@
 
 #### data
 
-| 字段              | 类型      | 描述                                       |
-|-----------------|---------|------------------------------------------|
-| bk_scope_type   | string  | 资源范围类型                                   |
-| bk_scope_id     | string  | 资源范围 ID                                  |
-| bk_biz_id       | long    | 兼容字段，业务/业务集 ID                          |
-| job_plan_id     | long    | 新建执行方案 ID                                |
-| job_plan_name   | string  | 执行方案名称                                   |
-| job_template_id | long    | 作业模板 ID                                  |
-| creator         | string  | 创建人（与请求头 X-Bk-Username 一致）             |
-| create_time     | long    | 创建时间，Unix 时间戳，单位毫秒                       |
-| need_update     | boolean | 是否需要从作业模板同步；语义与 Web 端方案 needUpdate 字段一致 |
+| 字段              | 类型      | 描述                 |
+|-----------------|---------|--------------------|
+| bk_scope_type   | string  | 资源范围类型             |
+| bk_scope_id     | string  | 资源范围 ID            |
+| bk_biz_id       | long    | 兼容字段，业务/业务集 ID     |
+| job_plan_id     | long    | 新建执行方案 ID          |
+| job_plan_name   | string  | 执行方案名称             |
+| job_template_id | long    | 作业模板 ID            |
+| creator         | string  | 创建人                |
+| create_time     | long    | 创建时间，Unix 时间戳，单位毫秒 |
+| need_update     | boolean | 是否需要从作业模板同步        |

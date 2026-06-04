@@ -1,6 +1,6 @@
 ### Description
 
-Create a new job plan under a resource scope, based on an existing job template. Validation, permission checks, and persistence align with the Web "create job plan" flow; this endpoint only exposes the OpenAPI V4 contract (JSON body, snake_case field names).
+Create a new job plan under a resource scope, based on an existing job template. 
 
 ### Request Parameters
 
@@ -33,7 +33,7 @@ Create a new job plan under a resource scope, based on an existing job template.
 | topo_node_list         | array | No       | CMDB topo nodes with `id` and `node_type`.                                                          |
 | kube_container_filters | array | No       | **Not supported** on this API; returns `ILLEGAL_PARAM_WITH_PARAM_NAME_AND_REASON` if provided.    |
 
-At least one of `host_list`, `dynamic_group_list`, or `topo_node_list` must be non-empty. This API does **not** check view permission on execute targets; permission is enforced when **starting** the plan, consistent with the Web create-plan flow.
+At least one of `host_list`, `dynamic_group_list`, or `topo_node_list` must be non-empty. 
 
 Fields other than those above (e.g. `description`, `type`, `required`, `changeable`) are determined by the template and **ignored** when supplied.
 
@@ -103,14 +103,14 @@ Fields other than those above (e.g. `description`, `type`, `required`, `changeab
 
 #### data
 
-| Field           | Type    | Description                                                                                |
-|-----------------|---------|--------------------------------------------------------------------------------------------|
-| bk_scope_type   | string  | Resource scope type                                                                        |
-| bk_scope_id     | string  | Resource scope ID                                                                          |
-| bk_biz_id       | long    | Legacy biz / biz set id                                                                    |
-| job_plan_id     | long    | Newly created plan id                                                                      |
-| job_plan_name   | string  | Plan name                                                                                  |
-| job_template_id | long    | Job template id                                                                            |
-| creator         | string  | Plan creator (equal to the `X-Bk-Username` request header)                                 |
-| create_time     | long    | Plan create time, unix timestamp in milliseconds                                           |
-| need_update     | boolean | Whether the plan needs to be synced from the template, same semantics as Web `needUpdate`. |
+| Field           | Type    | Description                                             |
+|-----------------|---------|---------------------------------------------------------|
+| bk_scope_type   | string  | Resource scope type                                     |
+| bk_scope_id     | string  | Resource scope ID                                       |
+| bk_biz_id       | long    | Legacy biz / biz set id                                 |
+| job_plan_id     | long    | Newly created plan id                                   |
+| job_plan_name   | string  | Plan name                                               |
+| job_template_id | long    | Job template id                                         |
+| creator         | string  | Plan creator                                            |
+| create_time     | long    | Plan create time, unix timestamp in milliseconds        |
+| need_update     | boolean | Whether the plan needs to be synced from the template.  |
