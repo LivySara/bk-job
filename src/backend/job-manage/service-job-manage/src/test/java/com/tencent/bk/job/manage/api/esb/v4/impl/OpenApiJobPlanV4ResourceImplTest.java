@@ -42,6 +42,7 @@ import com.tencent.bk.job.common.util.JobContextUtil;
 import com.tencent.bk.job.execute.model.esb.v4.req.OpenApiV4HostDTO;
 import com.tencent.bk.job.execute.model.esb.v4.req.V4ContainerFilter;
 import com.tencent.bk.job.execute.model.esb.v4.req.V4ExecuteTargetDTO;
+import com.tencent.bk.job.manage.api.esb.impl.v4.OpenApiJobPlanV4ResourceImpl;
 import com.tencent.bk.job.manage.auth.PlanAuthService;
 import com.tencent.bk.job.manage.auth.TemplateAuthService;
 import com.tencent.bk.job.manage.model.dto.task.TaskPlanInfoDTO;

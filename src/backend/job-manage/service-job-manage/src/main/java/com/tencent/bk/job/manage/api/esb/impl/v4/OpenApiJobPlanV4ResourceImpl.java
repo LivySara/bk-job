@@ -22,7 +22,7 @@
  * IN THE SOFTWARE.
  */
 
-package com.tencent.bk.job.manage.api.esb.v4.impl;
+package com.tencent.bk.job.manage.api.esb.impl.v4;
 
 import com.tencent.bk.audit.annotations.AuditEntry;
 import com.tencent.bk.audit.annotations.AuditRequestBody;
