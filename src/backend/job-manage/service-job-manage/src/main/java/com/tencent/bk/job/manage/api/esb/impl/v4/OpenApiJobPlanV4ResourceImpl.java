@@ -279,7 +279,7 @@ public class OpenApiJobPlanV4ResourceImpl implements OpenApiJobPlanV4Resource {
                 .map(OpenApiJobPlanV4ResourceImpl::toTaskNodeInfoDTO)
                 .collect(Collectors.toList()));
         }
-        return new TaskTargetDTO(null, hostNode, null);
+        return new TaskTargetDTO(null, hostNode, null, null);
     }
 
     private static ApplicationHostDTO toApplicationHostDTO(OpenApiV4HostDTO host) {
