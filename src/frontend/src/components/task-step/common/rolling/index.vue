@@ -36,7 +36,25 @@
       </span>
     </jb-form-item>
     <div v-if="formData[enabledField]">
+      <!-- 滚动对象类型选择 -->
       <jb-form-item
+        ref="rollingType"
+        :label="$t('滚动对象')"
+        required>
+        <bk-radio-group
+          class="form-item-content radio-check"
+          :value="formData[typeField]"
+          @change="handleRollingTypeChange">
+          <bk-radio :value="1">
+            {{ $t('传输目标') }}
+          </bk-radio>
+          <bk-radio :value="2">
+            {{ $t('源文件') }}
+          </bk-radio>
+        </bk-radio-group>
+      </jb-form-item>
+      <jb-form-item
+        v-if="formData[typeField] === 1"
         ref="expr"
         :label="$t('滚动策略')"
         :property="exprField"
@@ -68,6 +86,33 @@
           </div>
         </div>
       </jb-form-item>
+      <!-- 源文件时显示源文件滚动配置 -->
+      <jb-form-item
+        v-if="formData[typeField] === 2"
+        ref="fileSource"
+        :label="$t('源文件滚动配置')">
+        <div class="form-item-content">
+          <div class="file-source-config">
+            <div class="config-item">
+              <span class="config-label">{{ $t('单批次最大源执行对象数') }}:</span>
+              <bk-input
+                :min="1"
+                type="number"
+                :value="formData[maxExecuteObjectNumField]"
+                @change="handleMaxExecuteObjectNumChange" />
+            </div>
+            <div class="config-item">
+              <span class="config-label">{{ $t('单个执行对象的最大并发文件数') }}:</span>
+              <bk-input
+                :min="1"
+                type="number"
+                :value="formData[maxFileNumField]"
+                @change="handleMaxFileNumChange" />
+            </div>
+          </div>
+        </div>
+      </jb-form-item>
+      <!-- 滚动机制 -->
       <jb-form-item
         ref="rollingMode"
         :label="$t('滚动机制')"
@@ -88,6 +133,61 @@
             :name="$t('不自动，每批次都人工确认')" />
         </bk-select>
       </jb-form-item>
+      <!-- 执行模式 -->
+      <jb-form-item
+        ref="executionMode"
+        :label="$t('滚动批次间执行模式')"
+        required>
+        <bk-radio-group
+          class="form-item-content radio-check"
+          :value="formData[executionModeField]"
+          @change="handleExecutionModeChange">
+          <bk-radio :value="1">
+            {{ $t('串行执行') }}
+          </bk-radio>
+          <bk-radio
+            :disabled="formData[typeField] === 2"
+            :value="2">
+            {{ $t('并行执行') }}
+          </bk-radio>
+        </bk-radio-group>
+      </jb-form-item>
+      <!-- 并行模式时显示延迟配置 -->
+      <template v-if="formData[executionModeField] === 2">
+        <jb-form-item
+          ref="batchStartWaitFixedMs"
+          :label="$t('批次间固定延迟（ms）')"
+          required>
+          <div class="form-item-content">
+            <bk-input
+              type="number"
+              :value="formData[batchStartWaitFixedMsField]"
+              @change="handleBatchStartWaitFixedMsChange" />
+          </div>
+        </jb-form-item>
+        <jb-form-item
+          ref="batchStartWaitRandomMinMs"
+          :label="$t('批次间随机延迟下限（ms）')"
+          required>
+          <div class="form-item-content">
+            <bk-input
+              type="number"
+              :value="formData[batchStartWaitRandomMinMsField]"
+              @change="handleBatchStartWaitRandomMinMsChange" />
+          </div>
+        </jb-form-item>
+        <jb-form-item
+          ref="batchStartWaitRandomMaxMs"
+          :label="$t('批次间随机延迟上限（ms）')"
+          required>
+          <div class="form-item-content">
+            <bk-input
+              type="number"
+              :value="formData[batchStartWaitRandomMaxMsField]"
+              @change="handleBatchStartWaitRandomMaxMsChange" />
+          </div>
+        </jb-form-item>
+      </template>
     </div>
     <div style="display: none">
       <div ref="tips">
@@ -135,11 +235,39 @@
         type: String,
         required: true,
       },
+      typeField: {
+        type: String,
+        required: true,
+      },
       exprField: {
         type: String,
         required: true,
       },
       modeField: {
+        type: String,
+        required: true,
+      },
+      executionModeField: {
+        type: String,
+        required: true,
+      },
+      maxExecuteObjectNumField: {
+        type: String,
+        required: true,
+      },
+      maxFileNumField: {
+        type: String,
+        required: true,
+      },
+      batchStartWaitFixedMsField: {
+        type: String,
+        required: true,
+      },
+      batchStartWaitRandomMinMsField: {
+        type: String,
+        required: true,
+      },
+      batchStartWaitRandomMaxMsField: {
         type: String,
         required: true,
       },
@@ -165,7 +293,8 @@
        * @returns { Array }
        */
       rollingExprRule() {
-        if (!this.formData[this.enabledField]) {
+        // 只有当滚动对象类型为传输目标时才验证
+        if (!this.formData[this.enabledField] || this.formData[this.typeField] !== 1) {
           return [];
         }
         return [
@@ -196,7 +325,9 @@
     watch: {
       formData: {
         handler(formData) {
-          this.validatorExpr(formData[this.exprField]);
+          if (formData[this.typeField] === 1) {
+            this.validatorExpr(formData[this.exprField]);
+          }
           setTimeout(() => {
             this.showTips();
           });
@@ -314,20 +445,40 @@
           this.tips = '';
           this.errorMessage = '';
           this.$emit('on-reset', {
+            [this.typeField]: 1,
             [this.exprField]: '',
             [this.modeField]: 1,
+            [this.executionModeField]: 1,
+            [this.maxExecuteObjectNumField]: null,
+            [this.maxFileNumField]: null,
+            [this.batchStartWaitFixedMsField]: null,
+            [this.batchStartWaitRandomMinMsField]: null,
+            [this.batchStartWaitRandomMaxMsField]: null,
           });
         }
-        // 滚动策略默认 10%
+        // 默认配置
         this.$emit('on-reset', {
+          [this.typeField]: 1,
           [this.exprField]: '10%',
           [this.modeField]: 1,
+          [this.executionModeField]: 1,
         });
         this.$nextTick(() => {
           if (this.formData[this.enabledField]) {
-            this.$refs.rollingMode.$el.scrollIntoView();
+            this.$refs.rollingType.$el.scrollIntoView();
           }
         });
+      },
+      /**
+       * @desc 滚动对象类型更新
+       * @param { Number } rollingType
+       */
+      handleRollingTypeChange(rollingType) {
+        this.$emit('on-change', this.typeField, rollingType);
+        // 源文件不支持并行执行，自动重置为串行执行
+        if (rollingType === 2 && this.formData[this.executionModeField] === 2) {
+          this.$emit('on-change', this.executionModeField, 1);
+        }
       },
       /**
        * @desc 滚动策略更新
@@ -339,11 +490,58 @@
         this.$emit('on-change', this.exprField, expr);
       }, 20),
       /**
+       * @desc 源文件滚动配置更新
+       * @param { Number } value
+       * @param { String } field 字段名
+       */
+      handleMaxExecuteObjectNumChange(value) {
+        this.$emit('on-change', this.maxExecuteObjectNumField, value);
+      },
+      handleMaxFileNumChange(value) {
+        this.$emit('on-change', this.maxFileNumField, value);
+      },
+      /**
        * @desc 滚动机制更新
        * @param { Number } rollingMode
        */
       handleRollingModeChange(rollingMode) {
         this.$emit('on-change', this.modeField, rollingMode);
+      },
+      /**
+       * @desc 执行模式更新
+       * @param { Number } executionMode
+       */
+      handleExecutionModeChange(executionMode) {
+        this.$emit('on-change', this.executionModeField, executionMode);
+        if (executionMode === 2) {
+          // 切换到并行模式时，默认设置延迟值
+          this.$emit('on-reset', {
+            [this.batchStartWaitFixedMsField]: 5000,
+            [this.batchStartWaitRandomMinMsField]: 0,
+            [this.batchStartWaitRandomMaxMsField]: 0,
+          });
+        }
+      },
+      /**
+       * @desc 批次间固定延迟更新
+       * @param { Number } value
+       */
+      handleBatchStartWaitFixedMsChange(value) {
+        this.$emit('on-change', this.batchStartWaitFixedMsField, value);
+      },
+      /**
+       * @desc 批次间随机延迟下限更新
+       * @param { Number } value
+       */
+      handleBatchStartWaitRandomMinMsChange(value) {
+        this.$emit('on-change', this.batchStartWaitRandomMinMsField, value);
+      },
+      /**
+       * @desc 批次间随机延迟上限更新
+       * @param { Number } value
+       */
+      handleBatchStartWaitRandomMaxMsChange(value) {
+        this.$emit('on-change', this.batchStartWaitRandomMaxMsField, value);
       },
       handleShowGuide() {
         this.isShowGuide = !this.isShowGuide;
@@ -392,6 +590,25 @@
       font-size: 12px;
       line-height: 18px;
       color: #ea3636;
+    }
+
+    .file-source-config {
+      display: flex;
+      flex-direction: column;
+
+      .config-item {
+        .config-label {
+          font-size: 14px;
+          color: #63656e;
+        }
+      }
+    }
+
+    .radio-check {
+      display: flex;
+      align-items: center;
+      height: 32px;
+      gap: 32px;
     }
   }
 
