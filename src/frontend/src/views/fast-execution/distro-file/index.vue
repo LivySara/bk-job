@@ -107,6 +107,7 @@
               :form-data="formData"
               max-execute-object-num-field="rollingMaxExecuteObjectNum"
               max-file-num-field="rollingMaxFileNum"
+              mode="file"
               mode-field="rollingMode"
               name="rolling"
               server-field="server"
@@ -541,7 +542,7 @@
             // 构建滚动配置
             const rollingConfig = {
               type: rollingType,
-              mode: rollingMode,
+              executionMode: rollingExecutionMode
             };
 
             // 根据滚动对象类型设置不同的配置
@@ -559,7 +560,7 @@
             }
 
             if(rollingExecutionMode === 1) {
-              rollingConfig.executionMode = rollingExecutionMode
+              rollingConfig.mode = rollingMode
             } else {
               // 并行模式时添加延迟配置
               rollingConfig.batchStartWaitFixedMs = rollingBatchStartWaitFixedMs;

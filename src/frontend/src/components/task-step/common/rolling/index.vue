@@ -36,46 +36,23 @@
       </span>
     </jb-form-item>
     <div v-if="formData[enabledField]">
-      <!-- 滚动对象类型选择 -->
+      <template v-if="isFileMode">
+        <!-- 滚动对象类型选择 -->
+        <rolling-type
+          ref="rollingType"
+          :form-data="formData"
+          :type-field="typeField"
+          @on-change="handleFieldChange" />
+        <!-- 执行模式 -->
+        <rolling-execution-mode
+          ref="executionMode"
+          :execution-mode-field="executionModeField"
+          :form-data="formData"
+          :type-field="typeField"
+          @on-change="handleExecutionModeChange" />
+      </template>
       <jb-form-item
-        v-if="typeField"
-        ref="rollingType"
-        :label="$t('滚动对象')"
-        required>
-        <bk-radio-group
-          class="form-item-content radio-check"
-          :value="formData[typeField]"
-          @change="handleRollingTypeChange">
-          <bk-radio :value="1">
-            {{ $t('传输目标') }}
-          </bk-radio>
-          <bk-radio :value="2">
-            {{ $t('源文件') }}
-          </bk-radio>
-        </bk-radio-group>
-      </jb-form-item>
-      <!-- 执行模式 -->
-      <jb-form-item
-        v-if="executionModeField"
-        ref="executionMode"
-        :label="$t('滚动批次间执行模式')"
-        required>
-        <bk-radio-group
-          class="form-item-content radio-check"
-          :value="formData[executionModeField]"
-          @change="handleExecutionModeChange">
-          <bk-radio :value="1">
-            {{ $t('串行执行') }}
-          </bk-radio>
-          <bk-radio
-            :disabled="formData[typeField] === 2"
-            :value="2">
-            {{ $t('并行执行') }}
-          </bk-radio>
-        </bk-radio-group>
-      </jb-form-item>
-      <jb-form-item
-        v-if="!typeField || formData[typeField] === 1"
+        v-if="!isFileMode || formData[typeField] === 1"
         ref="expr"
         :label="$t('滚动策略')"
         :property="exprField"
@@ -108,49 +85,17 @@
         </div>
       </jb-form-item>
       <!-- 源文件时显示源文件滚动配置 -->
-      <div
+      <rolling-file-config
         v-else
-        class="file-source-section">
-        <jb-form-item
-          class="batch-form-item"
-          :label="$t('分批策略')"
-          required>
-          <div class="formula-tip">
-            {{ $t('单传输目标上的并发任务数 = 单批次最大并发源主机/容器数 * 源单主机/容器最大并发文件数') }}
-          </div>
-        </jb-form-item>
-        <div class="file-source-form">
-          <jb-form-item
-            ref="maxExecuteObjectNum"
-            :label="$t('单批次最大并发源主机/容器数')"
-            :property="maxExecuteObjectNumField"
-            required
-            :rules="maxExecuteObjectNumRule">
-            <bk-input
-              class="form-item-content"
-              :min="1"
-              type="number"
-              :value="formData[maxExecuteObjectNumField]"
-              @change="handleMaxExecuteObjectNumChange" />
-          </jb-form-item>
-          <jb-form-item
-            ref="maxFileNum"
-            :label="$t('源单主机/容器最大并发文件数')"
-            :property="maxFileNumField"
-            required
-            :rules="maxFileNumRule">
-            <bk-input
-              class="form-item-content"
-              :min="1"
-              type="number"
-              :value="formData[maxFileNumField]"
-              @change="handleMaxFileNumChange" />
-          </jb-form-item>
-        </div>
-      </div>
+        :enabled-field="enabledField"
+        :form-data="formData"
+        :max-execute-object-num-field="maxExecuteObjectNumField"
+        :max-file-num-field="maxFileNumField"
+        :type-field="typeField"
+        @on-change="handleFieldChange" />
       <!-- 滚动机制 - 并行执行时不显示 -->
       <jb-form-item
-        v-if="!executionModeField || formData[executionModeField] === 1"
+        v-if="!isFileMode|| formData[executionModeField] === 1"
         ref="rollingMode"
         :label="$t('滚动机制')"
         required>
@@ -171,49 +116,14 @@
         </bk-select>
       </jb-form-item>
       <!-- 并行模式时显示延迟配置 -->
-      <div
+      <rolling-batch-delay
         v-else
-        ref="batchStartWait">
-        <jb-form-item
-          ref="batchStartWaitFixedMs"
-          :label="$t('批次间固定延迟（ms）')"
-          required>
-          <div class="form-item-content">
-            <bk-input
-              :max="3600000"
-              :min="0"
-              type="number"
-              :value="formData[batchStartWaitFixedMsField]"
-              @change="handleBatchStartWaitFixedMsChange" />
-          </div>
-        </jb-form-item>
-        <jb-form-item
-          ref="batchStartWaitRandomMinMs"
-          :label="$t('批次间随机延迟下限（ms）')"
-          required>
-          <div class="form-item-content">
-            <bk-input
-              :max="3600000"
-              :min="0"
-              type="number"
-              :value="formData[batchStartWaitRandomMinMsField]"
-              @change="handleBatchStartWaitRandomMinMsChange" />
-          </div>
-        </jb-form-item>
-        <jb-form-item
-          ref="batchStartWaitRandomMaxMs"
-          :label="$t('批次间随机延迟上限（ms）')"
-          required>
-          <div class="form-item-content">
-            <bk-input
-              :max="3600000"
-              :min="0"
-              type="number"
-              :value="formData[batchStartWaitRandomMaxMsField]"
-              @change="handleBatchStartWaitRandomMaxMsChange" />
-          </div>
-        </jb-form-item>
-      </div>
+        ref="batchStartWait"
+        :batch-start-wait-fixed-ms-field="batchStartWaitFixedMsField"
+        :batch-start-wait-random-max-ms-field="batchStartWaitRandomMaxMsField"
+        :batch-start-wait-random-min-ms-field="batchStartWaitRandomMinMsField"
+        :form-data="formData"
+        @on-change="handleFieldChange" />
     </div>
     <div style="display: none">
       <div ref="tips">
@@ -250,13 +160,30 @@
   import I18n from '@/i18n';
 
   import Guide from './guide';
+  import RollingBatchDelay from './rolling-batch-delay';
+  import RollingExecutionMode from './rolling-execution-mode';
+  import RollingFileConfig from './rolling-file-config';
+  import RollingType from './rolling-type';
 
   export default {
     name: '',
     components: {
       Guide,
+      RollingType,
+      RollingExecutionMode,
+      RollingFileConfig,
+      RollingBatchDelay,
     },
     props: {
+      /**
+       * @desc 模式类型，script-脚本执行，file-文件分发
+       * @values 'script' | 'file'
+       */
+      mode: {
+        type: String,
+        default: 'script',
+        validator: (value) => ['script', 'file'].includes(value),
+      },
       enabledField: {
         type: String,
         required: true,
@@ -320,7 +247,7 @@
        */
       rollingExprRule() {
         // 只有当滚动对象类型为传输目标时才验证
-        if (!this.formData[this.enabledField] || this.formData[this.typeField] !== 1) {
+        if (!this.formData[this.enabledField] || (this.isFileMode && this.formData[this.typeField] === 2)) {
           return [];
         }
         return [
@@ -347,47 +274,14 @@
           },
         ];
       },
-      /**
-       * @desc 单批次最大并发源主机/容器数校验规则
-       * @returns { Array }
-       */
-      maxExecuteObjectNumRule() {
-        if (!this.formData[this.enabledField] || this.formData[this.typeField] !== 2) {
-          return [];
-        }
-        return [
-          {
-            validator: (value) => {
-              return Number(value) > 0;
-            },
-            message: I18n.t('单批次最大并发源主机/容器数必填'),
-            trigger: 'blur',
-          },
-        ];
-      },
-      /**
-       * @desc 源单主机/容器最大并发文件数校验规则
-       * @returns { Array }
-       */
-      maxFileNumRule() {
-        if (!this.formData[this.enabledField] || this.formData[this.typeField] !== 2) {
-          return [];
-        }
-        return [
-          {
-            validator: (value) => {
-              return Number(value) > 0;
-            },
-            message: I18n.t('源单主机/容器最大并发文件数必填'),
-            trigger: 'blur',
-          },
-        ];
+      isFileMode() {
+        return this.mode === 'file';
       },
     },
     watch: {
       formData: {
         handler(formData) {
-          if (formData[this.typeField] === 1) {
+          if (!this.isFileMode || formData[this.typeField] === 1) {
             this.validatorExpr(formData[this.exprField]);
           }
           setTimeout(() => {
@@ -507,23 +401,27 @@
           this.tips = '';
           this.errorMessage = '';
           this.$emit('on-reset', {
-            [this.typeField]: 1,
             [this.exprField]: '',
             [this.modeField]: 1,
-            [this.executionModeField]: 1,
-            [this.maxExecuteObjectNumField]: null,
-            [this.maxFileNumField]: null,
-            [this.batchStartWaitFixedMsField]: null,
-            [this.batchStartWaitRandomMinMsField]: null,
-            [this.batchStartWaitRandomMaxMsField]: null,
+            ...(this.isFileMode ? {
+              [this.typeField]: 1,
+              [this.executionModeField]: 1,
+              [this.maxExecuteObjectNumField]: null,
+              [this.maxFileNumField]: null,
+              [this.batchStartWaitFixedMsField]: null,
+              [this.batchStartWaitRandomMinMsField]: null,
+              [this.batchStartWaitRandomMaxMsField]: null,
+            } : {}),
           });
         }
         // 默认配置
         this.$emit('on-reset', {
-          [this.typeField]: 1,
           [this.exprField]: '10%',
           [this.modeField]: 1,
-          [this.executionModeField]: 1,
+          ...(this.isFileMode ? {
+            [this.typeField]: 1,
+            [this.executionModeField]: 1,
+          } : {}),
         });
         this.$nextTick(() => {
           if (this.formData[this.enabledField]) {
@@ -537,17 +435,6 @@
         });
       },
       /**
-       * @desc 滚动对象类型更新
-       * @param { Number } rollingType
-       */
-      handleRollingTypeChange(rollingType) {
-        this.$emit('on-change', this.typeField, rollingType);
-        // 源文件不支持并行执行，自动重置为串行执行
-        if (rollingType === 2 && this.formData[this.executionModeField] === 2) {
-          this.$emit('on-change', this.executionModeField, 1);
-        }
-      },
-      /**
        * @desc 滚动策略更新
        * @param { String } expr 滚动表达式
        */
@@ -557,17 +444,6 @@
         this.$emit('on-change', this.exprField, expr);
       }, 20),
       /**
-       * @desc 源文件滚动配置更新
-       * @param { Number } value
-       * @param { String } field 字段名
-       */
-      handleMaxExecuteObjectNumChange(value) {
-        this.$emit('on-change', this.maxExecuteObjectNumField, value);
-      },
-      handleMaxFileNumChange(value) {
-        this.$emit('on-change', this.maxFileNumField, value);
-      },
-      /**
        * @desc 滚动机制更新
        * @param { Number } rollingMode
        */
@@ -575,11 +451,27 @@
         this.$emit('on-change', this.modeField, rollingMode);
       },
       /**
-       * @desc 执行模式更新
+       * @desc 字段值变更处理
+       * @param { String } field
+       * @param { Number } value
+       */
+      handleFieldChange(field, value) {
+        if (field === this.typeField) {
+          value === 1 && this.$emit('on-reset', {
+            [this.exprField]: '10%',
+          });
+          // 源文件不支持并行执行，自动重置为串行执行
+          value === 2 && this.formData[this.executionModeField] === 2 && this.$emit('on-change', this.executionModeField, 1);
+        }
+        this.$emit('on-change', field, value);
+      },
+      /**
+       * @desc 执行模式变更处理
+       * @param { String } field
        * @param { Number } executionMode
        */
-      handleExecutionModeChange(executionMode) {
-        this.$emit('on-change', this.executionModeField, executionMode);
+      handleExecutionModeChange(field, executionMode) {
+        this.handleFieldChange(field, executionMode)
         if (executionMode === 2) {
           // 切换到并行模式时，默认设置延迟值
           this.$emit('on-reset', {
@@ -588,30 +480,11 @@
             [this.batchStartWaitRandomMaxMsField]: 0,
           });
           this.$nextTick(() => {
-            this.$refs.batchStartWait.scrollIntoView();
+            if (this.isFileMode) {
+              this.$refs.batchStartWait?.$el?.scrollIntoView();
+            }
           });
         }
-      },
-      /**
-       * @desc 批次间固定延迟更新
-       * @param { Number } value
-       */
-      handleBatchStartWaitFixedMsChange(value) {
-        this.$emit('on-change', this.batchStartWaitFixedMsField, value);
-      },
-      /**
-       * @desc 批次间随机延迟下限更新
-       * @param { Number } value
-       */
-      handleBatchStartWaitRandomMinMsChange(value) {
-        this.$emit('on-change', this.batchStartWaitRandomMinMsField, value);
-      },
-      /**
-       * @desc 批次间随机延迟上限更新
-       * @param { Number } value
-       */
-      handleBatchStartWaitRandomMaxMsChange(value) {
-        this.$emit('on-change', this.batchStartWaitRandomMaxMsField, value);
       },
       handleShowGuide() {
         this.isShowGuide = !this.isShowGuide;
