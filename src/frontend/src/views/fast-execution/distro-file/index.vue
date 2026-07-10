@@ -281,10 +281,7 @@
               expr: rollingExpr,
               mode: rollingMode,
               executionMode: rollingExecutionMode,
-              fileSource: {
-                maxExecuteObjectNumInBatch: rollingMaxExecuteObjectNum,
-                maxFileNumOfSingleExecuteObject: rollingMaxFileNum,
-              },
+              fileSource,
               batchStartWaitFixedMs: rollingBatchStartWaitFixedMs,
               batchStartWaitRandomMinMs: rollingBatchStartWaitRandomMinMs,
               batchStartWaitRandomMaxMs: rollingBatchStartWaitRandomMaxMs,
@@ -319,8 +316,8 @@
             rollingExpr,
             rollingMode,
             rollingExecutionMode,
-            rollingMaxExecuteObjectNum,
-            rollingMaxFileNum,
+            rollingMaxExecuteObjectNum: fileSource?.maxExecuteObjectNumInBatch,
+            rollingMaxFileNum: fileSource?.maxFileNumOfSingleExecuteObject,
             rollingBatchStartWaitFixedMs,
             rollingBatchStartWaitRandomMinMs,
             rollingBatchStartWaitRandomMaxMs,
@@ -545,7 +542,6 @@
             const rollingConfig = {
               type: rollingType,
               mode: rollingMode,
-              executionMode: rollingExecutionMode,
             };
 
             // 根据滚动对象类型设置不同的配置
@@ -562,8 +558,10 @@
               rollingConfig.fileSource = fileSource;
             }
 
-            // 并行模式时添加延迟配置
-            if (rollingExecutionMode === 2) {
+            if(rollingExecutionMode === 1) {
+              rollingConfig.executionMode = rollingExecutionMode
+            } else {
+              // 并行模式时添加延迟配置
               rollingConfig.batchStartWaitFixedMs = rollingBatchStartWaitFixedMs;
               rollingConfig.batchStartWaitRandomMinMs = rollingBatchStartWaitRandomMinMs;
               rollingConfig.batchStartWaitRandomMaxMs = rollingBatchStartWaitRandomMaxMs;

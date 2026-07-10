@@ -53,8 +53,27 @@
           </bk-radio>
         </bk-radio-group>
       </jb-form-item>
+      <!-- 执行模式 -->
       <jb-form-item
-        v-if="formData[typeField] === 1"
+        ref="executionMode"
+        :label="$t('滚动批次间执行模式')"
+        required>
+        <bk-radio-group
+          class="form-item-content radio-check"
+          :value="formData[executionModeField]"
+          @change="handleExecutionModeChange">
+          <bk-radio :value="1">
+            {{ $t('串行执行') }}
+          </bk-radio>
+          <bk-radio
+            :disabled="formData[typeField] === 2"
+            :value="2">
+            {{ $t('并行执行') }}
+          </bk-radio>
+        </bk-radio-group>
+      </jb-form-item>
+      <jb-form-item
+        v-show="formData[typeField] === 1"
         ref="expr"
         :label="$t('滚动策略')"
         :property="exprField"
@@ -87,33 +106,51 @@
         </div>
       </jb-form-item>
       <!-- 源文件时显示源文件滚动配置 -->
-      <jb-form-item
+      <div
         v-if="formData[typeField] === 2"
-        ref="fileSource"
-        :label="$t('源文件滚动配置')">
-        <div class="form-item-content">
-          <div class="file-source-config">
-            <div class="config-item">
-              <span class="config-label">{{ $t('单批次最大源执行对象数') }}:</span>
-              <bk-input
-                :min="1"
-                type="number"
-                :value="formData[maxExecuteObjectNumField]"
-                @change="handleMaxExecuteObjectNumChange" />
-            </div>
-            <div class="config-item">
-              <span class="config-label">{{ $t('单个执行对象的最大并发文件数') }}:</span>
-              <bk-input
-                :min="1"
-                type="number"
-                :value="formData[maxFileNumField]"
-                @change="handleMaxFileNumChange" />
-            </div>
+        class="file-source-section">
+        <jb-form-item
+          class="batch-form-item"
+          :label="$t('分批策略')"
+          required>
+          <div class="formula-tip">
+            {{ $t('单传输目标上的并发任务数 = 单批次最大并发源主机/容器数 * 源单主机/容器最大并发文件数') }}
           </div>
+        </jb-form-item>
+        <div class="file-source-form">
+          <jb-form-item
+            ref="maxExecuteObjectNum"
+            :label="$t('单批次最大并发源主机/容器数')"
+            :label-width="218"
+            :property="maxExecuteObjectNumField"
+            required
+            :rules="maxExecuteObjectNumRule">
+            <bk-input
+              class="form-item-content"
+              :min="1"
+              type="number"
+              :value="formData[maxExecuteObjectNumField]"
+              @change="handleMaxExecuteObjectNumChange" />
+          </jb-form-item>
+          <jb-form-item
+            ref="maxFileNum"
+            :label="$t('源单主机/容器最大并发文件数')"
+            :label-width="218"
+            :property="maxFileNumField"
+            required
+            :rules="maxFileNumRule">
+            <bk-input
+              class="form-item-content"
+              :min="1"
+              type="number"
+              :value="formData[maxFileNumField]"
+              @change="handleMaxFileNumChange" />
+          </jb-form-item>
         </div>
-      </jb-form-item>
-      <!-- 滚动机制 -->
+      </div>
+      <!-- 滚动机制 - 并行执行时不显示 -->
       <jb-form-item
+        v-show="formData[executionModeField] !== 2"
         ref="rollingMode"
         :label="$t('滚动机制')"
         required>
@@ -133,33 +170,18 @@
             :name="$t('不自动，每批次都人工确认')" />
         </bk-select>
       </jb-form-item>
-      <!-- 执行模式 -->
-      <jb-form-item
-        ref="executionMode"
-        :label="$t('滚动批次间执行模式')"
-        required>
-        <bk-radio-group
-          class="form-item-content radio-check"
-          :value="formData[executionModeField]"
-          @change="handleExecutionModeChange">
-          <bk-radio :value="1">
-            {{ $t('串行执行') }}
-          </bk-radio>
-          <bk-radio
-            :disabled="formData[typeField] === 2"
-            :value="2">
-            {{ $t('并行执行') }}
-          </bk-radio>
-        </bk-radio-group>
-      </jb-form-item>
       <!-- 并行模式时显示延迟配置 -->
-      <template v-if="formData[executionModeField] === 2">
+      <div
+        v-show="formData[executionModeField] === 2"
+        ref="batchStartWait">
         <jb-form-item
           ref="batchStartWaitFixedMs"
           :label="$t('批次间固定延迟（ms）')"
           required>
           <div class="form-item-content">
             <bk-input
+              :max="3600000"
+              :min="0"
               type="number"
               :value="formData[batchStartWaitFixedMsField]"
               @change="handleBatchStartWaitFixedMsChange" />
@@ -171,6 +193,8 @@
           required>
           <div class="form-item-content">
             <bk-input
+              :max="3600000"
+              :min="0"
               type="number"
               :value="formData[batchStartWaitRandomMinMsField]"
               @change="handleBatchStartWaitRandomMinMsChange" />
@@ -182,12 +206,14 @@
           required>
           <div class="form-item-content">
             <bk-input
+              :max="3600000"
+              :min="0"
               type="number"
               :value="formData[batchStartWaitRandomMaxMsField]"
               @change="handleBatchStartWaitRandomMaxMsChange" />
           </div>
         </jb-form-item>
-      </template>
+      </div>
     </div>
     <div style="display: none">
       <div ref="tips">
@@ -317,6 +343,42 @@
               }
             },
             message: I18n.t('滚动策略格式不正确'),
+            trigger: 'blur',
+          },
+        ];
+      },
+      /**
+       * @desc 单批次最大并发源主机/容器数校验规则
+       * @returns { Array }
+       */
+      maxExecuteObjectNumRule() {
+        if (!this.formData[this.enabledField] || this.formData[this.typeField] !== 2) {
+          return [];
+        }
+        return [
+          {
+            validator: (value) => {
+              return Number(value) > 0;
+            },
+            message: I18n.t('单批次最大并发源主机/容器数必填'),
+            trigger: 'blur',
+          },
+        ];
+      },
+      /**
+       * @desc 源单主机/容器最大并发文件数校验规则
+       * @returns { Array }
+       */
+      maxFileNumRule() {
+        if (!this.formData[this.enabledField] || this.formData[this.typeField] !== 2) {
+          return [];
+        }
+        return [
+          {
+            validator: (value) => {
+              return Number(value) > 0;
+            },
+            message: I18n.t('源单主机/容器最大并发文件数必填'),
             trigger: 'blur',
           },
         ];
@@ -520,6 +582,9 @@
             [this.batchStartWaitRandomMinMsField]: 0,
             [this.batchStartWaitRandomMaxMsField]: 0,
           });
+          this.$nextTick(() => {
+            this.$refs.batchStartWait.scrollIntoView();
+          });
         }
       },
       /**
@@ -592,23 +657,37 @@
       color: #ea3636;
     }
 
-    .file-source-config {
-      display: flex;
-      flex-direction: column;
-
-      .config-item {
-        .config-label {
-          font-size: 14px;
-          color: #63656e;
-        }
-      }
-    }
-
     .radio-check {
       display: flex;
       align-items: center;
       height: 32px;
       gap: 32px;
+    }
+  }
+
+  .file-source-section {
+    width: 100%;
+    .batch-form-item.bk-form-item {
+      margin-bottom: 12px;
+      .formula-tip {
+        font-size: 12px;
+        color: #979ba5;
+      }
+    }
+
+    .file-source-form {
+      background-color: #fafafa;
+      padding: 16px 12px;
+      border-radius: 2px;
+      margin-bottom: 12px;
+
+      .jb-form-item {
+        margin-bottom: 16px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
     }
   }
 
