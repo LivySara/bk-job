@@ -38,6 +38,7 @@
     <div v-if="formData[enabledField]">
       <!-- 滚动对象类型选择 -->
       <jb-form-item
+        v-if="typeField"
         ref="rollingType"
         :label="$t('滚动对象')"
         required>
@@ -55,6 +56,7 @@
       </jb-form-item>
       <!-- 执行模式 -->
       <jb-form-item
+        v-if="executionModeField"
         ref="executionMode"
         :label="$t('滚动批次间执行模式')"
         required>
@@ -73,7 +75,7 @@
         </bk-radio-group>
       </jb-form-item>
       <jb-form-item
-        v-show="formData[typeField] === 1"
+        v-if="!typeField || formData[typeField] === 1"
         ref="expr"
         :label="$t('滚动策略')"
         :property="exprField"
@@ -107,7 +109,7 @@
       </jb-form-item>
       <!-- 源文件时显示源文件滚动配置 -->
       <div
-        v-if="formData[typeField] === 2"
+        v-else
         class="file-source-section">
         <jb-form-item
           class="batch-form-item"
@@ -121,7 +123,6 @@
           <jb-form-item
             ref="maxExecuteObjectNum"
             :label="$t('单批次最大并发源主机/容器数')"
-            :label-width="218"
             :property="maxExecuteObjectNumField"
             required
             :rules="maxExecuteObjectNumRule">
@@ -135,7 +136,6 @@
           <jb-form-item
             ref="maxFileNum"
             :label="$t('源单主机/容器最大并发文件数')"
-            :label-width="218"
             :property="maxFileNumField"
             required
             :rules="maxFileNumRule">
@@ -150,7 +150,7 @@
       </div>
       <!-- 滚动机制 - 并行执行时不显示 -->
       <jb-form-item
-        v-show="formData[executionModeField] !== 2"
+        v-if="!executionModeField || formData[executionModeField] === 1"
         ref="rollingMode"
         :label="$t('滚动机制')"
         required>
@@ -172,7 +172,7 @@
       </jb-form-item>
       <!-- 并行模式时显示延迟配置 -->
       <div
-        v-show="formData[executionModeField] === 2"
+        v-else
         ref="batchStartWait">
         <jb-form-item
           ref="batchStartWaitFixedMs"
@@ -263,7 +263,7 @@
       },
       typeField: {
         type: String,
-        required: true,
+        required: false,
       },
       exprField: {
         type: String,
@@ -275,27 +275,27 @@
       },
       executionModeField: {
         type: String,
-        required: true,
+        required: false,
       },
       maxExecuteObjectNumField: {
         type: String,
-        required: true,
+        required: false,
       },
       maxFileNumField: {
         type: String,
-        required: true,
+        required: false,
       },
       batchStartWaitFixedMsField: {
         type: String,
-        required: true,
+        required: false,
       },
       batchStartWaitRandomMinMsField: {
         type: String,
-        required: true,
+        required: false,
       },
       batchStartWaitRandomMaxMsField: {
         type: String,
-        required: true,
+        required: false,
       },
       serverField: {
         type: String,
@@ -527,7 +527,12 @@
         });
         this.$nextTick(() => {
           if (this.formData[this.enabledField]) {
-            this.$refs.rollingType.$el.scrollIntoView();
+            const rollingTypeEl = this.$refs.rollingType?.$el
+            if(rollingTypeEl) {
+              rollingTypeEl.scrollIntoView();
+            } else {
+              this.$refs.rollingMode.$el.scrollIntoView()
+            }
           }
         });
       },
@@ -677,12 +682,16 @@
 
     .file-source-form {
       background-color: #fafafa;
-      padding: 16px 12px;
+      padding: 16px 12px 16px 0;
       border-radius: 2px;
       margin-bottom: 12px;
 
       .jb-form-item {
         margin-bottom: 16px;
+
+        .bk-label .bk-label-text {
+          padding-left: 12px;
+        }
 
         &:last-child {
           margin-bottom: 0;
