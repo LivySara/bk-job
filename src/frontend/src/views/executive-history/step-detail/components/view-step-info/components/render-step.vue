@@ -77,7 +77,7 @@
           </detail-item>
         </template>
         <detail-item
-          v-if="rollingModeText"
+          v-if="rollingModeText && stepInfo.rollingConfig.executionMode !== 2"
           :label="$t('history.滚动机制：')">
           {{ rollingModeText }}
         </detail-item>
